@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora Calórica · DP Trainer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8C97A;
+    --gold-dark: #8B6914;
+    --black: #0A0A0A;
+    --dark: #111111;
+    --dark2: #1A1A1A;
+    --dark3: #222222;
+    --gray: #333333;
+    --text: #E8E0D0;
+    --text-muted: #888888;
+    --white: #FFFFFF;
+    --protein: #E05252;
+    --carbs: #4A90D9;
+    --fat: #E8A534;
+    --green: #4CAF82;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--black);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(201,168,76,0.15);
+    background: rgba(10,10,10,0.9);
+    backdrop-filter: blur(20px);
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: var(--white);
+  }
+  .logo span { color: var(--gold); }
+
+  .header-badge {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    border: 1px solid rgba(201,168,76,0.4);
+    padding: 6px 14px;
+    font-weight: 500;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    z-index: 5;
+    text-align: center;
+    padding: 70px 20px 50px;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(201,168,76,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-label {
+    font-size: 11px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 8vw, 90px);
+    line-height: 0.95;
+    letter-spacing: 3px;
+    color: var(--white);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--gold);
+    display: block;
+  }
+
+  .hero p {
+    font-size: 16px;
+    color: var(--text-muted);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* TABS */
+  .tabs-wrapper {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin: 40px auto 0;
+    max-width: 500px;
+    border: 1px solid var(--gray);
+    overflow: hidden;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 14px 20px;
+    background: var(--dark2);
+    border: none;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-right: 1px solid var(--gray);
+  }
+
+  .tab-btn:last-child { border-right: none; }
+
+  .tab-btn.active {
+    background: var(--gold);
+    color: var(--black);
+  }
+
+  /* MAIN CONTENT */
+  .main {
+    position: relative;
+    z-index: 5;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* CALCULATOR */
+  .calc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 600px) {
+    .calc-grid { grid-template-columns: 1fr; }
+    .calc-grid.three { grid-template-columns: 1fr; }
+  }
+
+  .calc-grid.three { grid-template-columns: repeat(3, 1fr); }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .input-group label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 500;
+  }
+
+  .input-group input,
+  .input-group select {
+    background: var(--dark2);
+    border: 1px solid var(--gray);
+    color: var(--white);
+    padding: 14px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    outline: none;
+    transition: border-color 0.3s;
+    -webkit-appearance: none;
+    width: 100%;
+  }
+
+  .input-group input:focus,
+  .input-group select:focus {
+    border-color: var(--gold);
+  }
+
+  .input-group select option {
+    background: var(--dark2);
+  }
+
+  /* GENDER BUTTONS */
+  .gender-btns {
+    display: flex;
+    gap: 10px;
+  }
+
+  .gender-btn {
+    flex: 1;
+    padding: 13px;
+    background: var(--dark2);
+    border: 1px solid var(--gray);
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .gender-btn.active {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(201,168,76,0.08);
+  }
+
+  /* OBJECTIVE */
+  .objective-btns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 500px) {
+    .objective-btns { grid-template-columns: 1fr; }
+  }
+
+  .obj-btn {
+    padding: 16px 12px;
+    background: var(--dark2);
+    border: 1px solid var(--gray);
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .obj-btn .obj-icon { font-size: 20px; display: block; margin-bottom: 6px; }
+  .obj-btn .obj-name { display: block; font-size: 13px; color: var(--text); }
+  .obj-btn .obj-desc { display: block; font-size: 10px; color: var(--text-muted); margin-top: 3px; letter-spacing: 1px; }
+
+  .obj-btn.active {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.07);
+  }
+  .obj-btn.active .obj-name { color: var(--gold); }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 500;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  /* CALCULATE BUTTON */
+  .calc-btn {
+    width: 100%;
+    padding: 20px;
+    background: var(--gold);
+    border: none;
+    color: var(--black);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: all 0.25s;
+    margin-top: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .calc-btn:hover {
+    background: var(--gold-light);
+    transform: translateY(-1px);
+  }
+
+  .calc-btn:active { transform: translateY(0); }
+
+  /* RESULTS */
+  #results {
+    display: none;
+    animation: fadeUp 0.5s ease forwards;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .results-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 40px 0 32px;
+  }
+
+  .results-divider::before,
+  .results-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--gray));
+  }
+  .results-divider::after {
+    background: linear-gradient(to left, transparent, var(--gray));
+  }
+
+  .results-divider span {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* CALORIES MAIN */
+  .cal-hero {
+    background: var(--dark2);
+    border: 1px solid rgba(201,168,76,0.3);
+    padding: 36px;
+    text-align: center;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cal-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+  }
+
+  .cal-hero .cal-label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .cal-hero .cal-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(70px, 15vw, 110px);
+    line-height: 1;
+    color: var(--gold);
+    letter-spacing: 2px;
+  }
+
+  .cal-hero .cal-unit {
+    font-size: 14px;
+    color: var(--text-muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .cal-hero .cal-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 16px;
+    font-style: italic;
+  }
+
+  /* TMB STRIP */
+  .tmb-strip {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .tmb-card {
+    flex: 1;
+    background: var(--dark2);
+    border: 1px solid var(--gray);
+    padding: 18px;
+    text-align: center;
+  }
+
+  .tmb-card .tmb-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    color: var(--white);
+    letter-spacing: 1px;
+  }
+
+  .tmb-card .tmb-lbl {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* MACROS */
+  .macros-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    color: var(--white);
+  }
+
+  .macros-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 500px) {
+    .macros-grid { grid-template-columns: 1fr; }
+  }
+
+  .macro-card {
+    background: var(--dark2);
+    border: 1px solid var(--gray);
+    padding: 24px 16px;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .macro-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .macro-card.protein::before { background: var(--protein); }
+  .macro-card.carbs::before { background: var(--carbs); }
+  .macro-card.fat::before { background: var(--fat); }
+
+  .macro-icon { font-size: 28px; margin-bottom: 8px; }
+
+  .macro-name {
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .macro-kcal {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+
+  .macro-card.protein .macro-kcal { color: var(--protein); }
+  .macro-card.carbs .macro-kcal { color: var(--carbs); }
+  .macro-card.fat .macro-kcal { color: var(--fat); }
+
+  .macro-kcal-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .macro-divider {
+    height: 1px;
+    background: var(--gray);
+    margin: 12px 0;
+  }
+
+  .macro-grams {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 34px;
+    line-height: 1;
+    color: var(--white);
+    letter-spacing: 1px;
+  }
+
+  .macro-grams-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* MACRO BAR */
+  .macro-bar-section {
+    background: var(--dark2);
+    border: 1px solid var(--gray);
+    padding: 20px 24px;
+    margin-bottom: 30px;
+  }
+
+  .macro-bar-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .macro-bar {
+    height: 8px;
+    border-radius: 0;
+    background: var(--gray);
+    display: flex;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .macro-bar-segment { transition: width 0.8s ease; }
+  .macro-bar-segment.protein { background: var(--protein); }
+  .macro-bar-segment.carbs { background: var(--carbs); }
+  .macro-bar-segment.fat { background: var(--fat); }
+
+  .macro-bar-legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .legend-dot.protein { background: var(--protein); }
+  .legend-dot.carbs { background: var(--carbs); }
+  .legend-dot.fat { background: var(--fat); }
+
+  /* CTA BOX */
+  .cta-box {
+    background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.04));
+    border: 1px solid rgba(201,168,76,0.4);
+    padding: 36px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+
+  .cta-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+  }
+
+  .cta-box .cta-eyebrow {
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 12px;
+  }
+
+  .cta-box h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 2px;
+    color: var(--white);
+    margin-bottom: 10px;
+  }
+
+  .cta-box p {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    line-height: 1.7;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cta-btn {
+    display: inline-block;
+    padding: 16px 40px;
+    background: var(--gold);
+    color: var(--black);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 3px;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: all 0.25s;
+  }
+
+  .cta-btn:hover {
+    background: var(--gold-light);
+    transform: translateY(-2px);
+  }
+
+  /* =================== FOOD SECTION =================== */
+  .food-intro {
+    text-align: center;
+    padding: 10px 0 40px;
+  }
+
+  .food-intro h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(36px, 6vw, 60px);
+    letter-spacing: 3px;
+    color: var(--white);
+    margin-bottom: 12px;
+  }
+
+  .food-intro h2 span { color: var(--gold); }
+
+  .food-intro p {
+    font-size: 15px;
+    color: var(--text-muted);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* FILTER PILLS */
+  .filter-pills {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+
+  .pill {
+    padding: 8px 20px;
+    background: var(--dark2);
+    border: 1px solid var(--gray);
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+  }
+
+  .pill.active { background: var(--gold); color: var(--black); border-color: var(--gold); }
+  .pill.protein-pill.active { background: var(--protein); border-color: var(--protein); color: white; }
+  .pill.carbs-pill.active { background: var(--carbs); border-color: var(--carbs); color: white; }
+  .pill.fat-pill.active { background: var(--fat); border-color: var(--fat); color: black; }
+
+  /* FOOD CARDS GRID */
+  .food-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+  }
+
+  .food-card {
+    background: var(--dark2);
+    border: 1px solid var(--gray);
+    padding: 20px;
+    transition: border-color 0.25s;
+    display: none;
+  }
+
+  .food-card.show { display: block; }
+  .food-card:hover { border-color: rgba(201,168,76,0.4); }
+
+  .food-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .food-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--white);
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .food-macro-tag {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    font-weight: 700;
+    margin-left: 8px;
+    white-space: nowrap;
+  }
+
+  .food-macro-tag.protein { background: rgba(224,82,82,0.15); color: var(--protein); }
+  .food-macro-tag.carbs { background: rgba(74,144,217,0.15); color: var(--carbs); }
+  .food-macro-tag.fat { background: rgba(232,165,52,0.15); color: var(--fat); }
+
+  .food-per100 {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .food-macros-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .food-macro-item {
+    flex: 1;
+    text-align: center;
+  }
+
+  .food-macro-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 1px;
+  }
+
+  .food-macro-item.p .food-macro-val { color: var(--protein); }
+  .food-macro-item.c .food-macro-val { color: var(--carbs); }
+  .food-macro-item.f .food-macro-val { color: var(--fat); }
+
+  .food-macro-lbl {
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .food-kcal-bar {
+    height: 2px;
+    margin: 12px 0 8px;
+    background: var(--gray);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .food-kcal-fill {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    transition: width 0.5s;
+  }
+
+  .food-kcal-text {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .food-kcal-text strong {
+    color: var(--white);
+    font-size: 13px;
+  }
+
+  /* SECTION TITLES IN FOOD */
+  .food-section-heading {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--white);
+    padding: 20px 0 12px;
+    border-bottom: 1px solid var(--gray);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .food-section-heading span { color: var(--gold); font-size: 14px; letter-spacing: 2px; }
+
+  /* TIP BOX */
+  .tip-box {
+    background: var(--dark2);
+    border-left: 3px solid var(--gold);
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .tip-box strong { color: var(--gold); }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    header { padding: 16px 20px; }
+    .hero { padding: 50px 20px 30px; }
+    .tmb-strip { flex-direction: column; }
+    .cal-hero { padding: 24px; }
+    .cta-box { padding: 24px 20px; }
+  }
+
+  /* SCROLL REVEAL */
+  .reveal { opacity: 0; transform: translateY(16px); transition: all 0.5s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">DP<span>·</span>TRAINER</div>
+  <div class="header-badge">Herramienta Gratuita</div>
+</header>
+
+<section class="hero">
+  <p class="hero-label">Calculadora de Nutrición Personalizada</p>
+  <h1>CONOCE TUS<em>CALORÍAS</em>EXACTAS</h1>
+  <p>Basado en la fórmula Harris-Benedict. Descubrí cuánto debés comer para alcanzar tu objetivo real.</p>
+</section>
+
+<!-- TABS -->
+<div class="tabs-wrapper">
+  <button class="tab-btn active" onclick="switchTab('calc')">🔥 Calculadora</button>
+  <button class="tab-btn" onclick="switchTab('food')">🥦 Guía de Alimentos</button>
+</div>
+
+<div class="main">
+
+  <!-- ============ CALCULATOR TAB ============ -->
+  <div id="tab-calc" class="tab-content active">
+
+    <!-- GÉNERO -->
+    <span class="section-label">1. Tu sexo</span>
+    <div class="gender-btns" style="margin-bottom:20px;">
+      <button class="gender-btn active" id="btn-m" onclick="setGender('m')">♂ Hombre</button>
+      <button class="gender-btn" id="btn-f" onclick="setGender('f')">♀ Mujer</button>
+    </div>
+
+    <!-- DATOS -->
+    <span class="section-label">2. Tus medidas</span>
+    <div class="calc-grid" style="margin-bottom:20px;">
+      <div class="input-group">
+        <label>Edad (años)</label>
+        <input type="number" id="edad" placeholder="25" min="15" max="80">
+      </div>
+      <div class="input-group">
+        <label>Peso (kg)</label>
+        <input type="number" id="peso" placeholder="75" min="30" max="250">
+      </div>
+      <div class="input-group">
+        <label>Altura (cm)</label>
+        <input type="number" id="altura" placeholder="175" min="100" max="220">
+      </div>
+    </div>
+
+    <!-- ACTIVIDAD -->
+    <span class="section-label">3. Nivel de actividad</span>
+    <div class="input-group" style="margin-bottom:20px;">
+      <select id="actividad">
+        <option value="1.2">Sedentario — Poco o nada de ejercicio</option>
+        <option value="1.375">Ligeramente activo — 1-3 días/semana</option>
+        <option value="1.55" selected>Moderadamente activo — 3-5 días/semana</option>
+        <option value="1.725">Muy activo — 6-7 días/semana</option>
+        <option value="1.9">Extremadamente activo — Atleta / doble jornada</option>
+      </select>
+    </div>
+
+    <!-- OBJETIVO -->
+    <span class="section-label">4. Tu objetivo</span>
+    <div class="objective-btns">
+      <button class="obj-btn" id="obj-perder" onclick="setObj('perder')">
+        <span class="obj-icon">🔥</span>
+        <span class="obj-name">Perder grasa</span>
+        <span class="obj-desc">Déficit −400 kcal</span>
+      </button>
+      <button class="obj-btn active" id="obj-mantener" onclick="setObj('mantener')">
+        <span class="obj-icon">⚖️</span>
+        <span class="obj-name">Mantener peso</span>
+        <span class="obj-desc">Calorías de mantenimiento</span>
+      </button>
+      <button class="obj-btn" id="obj-ganar" onclick="setObj('ganar')">
+        <span class="obj-icon">💪</span>
+        <span class="obj-name">Ganar músculo</span>
+        <span class="obj-desc">Superávit +300 kcal</span>
+      </button>
+    </div>
+
+    <button class="calc-btn" onclick="calcular()">CALCULAR MIS CALORÍAS →</button>
+
+    <!-- RESULTS -->
+    <div id="results">
+      <div class="results-divider"><span>Tu resultado personalizado</span></div>
+
+      <!-- MAIN CALORIE -->
+      <div class="cal-hero reveal">
+        <div class="cal-label">Calorías Diarias Recomendadas</div>
+        <div class="cal-number" id="res-calorias">0</div>
+        <div class="cal-unit">KCAL / DÍA</div>
+        <div class="cal-sub" id="res-obj-text"></div>
+      </div>
+
+      <!-- TMB + GET -->
+      <div class="tmb-strip reveal">
+        <div class="tmb-card">
+          <div class="tmb-val" id="res-tmb">0</div>
+          <div class="tmb-lbl">TMB — Metabolismo Basal</div>
+        </div>
+        <div class="tmb-card">
+          <div class="tmb-val" id="res-get">0</div>
+          <div class="tmb-lbl">GET — Gasto Total Diario</div>
+        </div>
+      </div>
+
+      <!-- MACROS -->
+      <div class="macros-title reveal">DISTRIBUCIÓN DE MACROS</div>
+
+      <div class="macros-grid reveal">
+        <div class="macro-card protein">
+          <div class="macro-icon">🥩</div>
+          <div class="macro-name">Proteína</div>
+          <div class="macro-kcal" id="res-prot-kcal">0</div>
+          <div class="macro-kcal-label">KCAL</div>
+          <div class="macro-divider"></div>
+          <div class="macro-grams" id="res-prot-g">0g</div>
+          <div class="macro-grams-label">Gramos / día</div>
+        </div>
+        <div class="macro-card carbs">
+          <div class="macro-icon">🍚</div>
+          <div class="macro-name">Carbohidratos</div>
+          <div class="macro-kcal" id="res-carb-kcal">0</div>
+          <div class="macro-kcal-label">KCAL</div>
+          <div class="macro-divider"></div>
+          <div class="macro-grams" id="res-carb-g">0g</div>
+          <div class="macro-grams-label">Gramos / día</div>
+        </div>
+        <div class="macro-card fat">
+          <div class="macro-icon">🥑</div>
+          <div class="macro-name">Grasas</div>
+          <div class="macro-kcal" id="res-fat-kcal">0</div>
+          <div class="macro-kcal-label">KCAL</div>
+          <div class="macro-divider"></div>
+          <div class="macro-grams" id="res-fat-g">0g</div>
+          <div class="macro-grams-label">Gramos / día</div>
+        </div>
+      </div>
+
+      <div class="macro-bar-section reveal">
+        <div class="macro-bar-label">Distribución porcentual de macronutrientes</div>
+        <div class="macro-bar">
+          <div class="macro-bar-segment protein" id="bar-prot" style="width:0%"></div>
+          <div class="macro-bar-segment carbs" id="bar-carb" style="width:0%"></div>
+          <div class="macro-bar-segment fat" id="bar-fat" style="width:0%"></div>
+        </div>
+        <div class="macro-bar-legend">
+          <div class="legend-item"><div class="legend-dot protein"></div><span id="leg-prot">Proteína 30%</span></div>
+          <div class="legend-item"><div class="legend-dot carbs"></div><span id="leg-carb">Carbos 40%</span></div>
+          <div class="legend-item"><div class="legend-dot fat"></div><span id="leg-fat">Grasas 30%</span></div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-box reveal">
+        <div class="cta-eyebrow">¿Querés resultados de verdad?</div>
+        <h3>ESTO ES SOLO EL PRINCIPIO</h3>
+        <p>Con una asesoría personalizada te diseño un plan completo adaptado a tu cuerpo, tu vida y tus objetivos reales. Sin dietas genéricas.</p>
+        <button class="cta-btn" onclick="alert('¡Gracias por tu interés! Contactanos para tu asesoría personalizada.')">QUIERO MI PLAN PERSONALIZADO</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ FOOD TAB ============ -->
+  <div id="tab-food" class="tab-content">
+    <div class="food-intro">
+      <h2>GUÍA DE<span> ALIMENTOS</span></h2>
+      <p>Conocé las mejores fuentes de proteínas, carbohidratos y grasas para armar tu alimentación.</p>
+    </div>
+
+    <div class="tip-box">
+      <strong>💡 Tip DP Trainer:</strong> Los macronutrientes son los pilares de tu nutrición. Cada uno tiene un rol específico. Las proteínas construyen músculo, los carbohidratos dan energía y las grasas regulan hormonas. Ninguno es el enemigo.
+    </div>
+
+    <div class="filter-pills">
+      <button class="pill active" onclick="filterFood('all')">Todos</button>
+      <button class="pill protein-pill" onclick="filterFood('protein')">🥩 Proteínas</button>
+      <button class="pill carbs-pill" onclick="filterFood('carbs')">🍚 Carbohidratos</button>
+      <button class="pill fat-pill" onclick="filterFood('fat')">🥑 Grasas</button>
+    </div>
+
+    <div class="food-grid" id="food-grid">
+      <!-- PROTEÍNAS -->
+      <div class="food-card show" data-macro="protein">
+        <div class="food-card-header">
+          <span class="food-name">Pechuga de pollo</span>
+          <span class="food-macro-tag protein">Proteína</span>
+        </div>
+        <div class="food-per100">Por 100g cocida</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">31g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">0g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">3.6g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:65%;background:var(--protein)"></div></div>
+        <div class="food-kcal-text"><strong>165 kcal</strong> · Alta en proteína, baja en grasa</div>
+      </div>
+
+      <div class="food-card show" data-macro="protein">
+        <div class="food-card-header">
+          <span class="food-name">Claras de huevo</span>
+          <span class="food-macro-tag protein">Proteína</span>
+        </div>
+        <div class="food-per100">Por 100g</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">11g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">0.7g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">0.2g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:22%;background:var(--protein)"></div></div>
+        <div class="food-kcal-text"><strong>52 kcal</strong> · Proteína casi pura, muy versátil</div>
+      </div>
+
+      <div class="food-card show" data-macro="protein">
+        <div class="food-card-header">
+          <span class="food-name">Atún al natural</span>
+          <span class="food-macro-tag protein">Proteína</span>
+        </div>
+        <div class="food-per100">Por 100g</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">24g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">0g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">1g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:50%;background:var(--protein)"></div></div>
+        <div class="food-kcal-text"><strong>116 kcal</strong> · Práctico y económico</div>
+      </div>
+
+      <div class="food-card show" data-macro="protein">
+        <div class="food-card-header">
+          <span class="food-name">Carne magra (lomo)</span>
+          <span class="food-macro-tag protein">Proteína</span>
+        </div>
+        <div class="food-per100">Por 100g cocida</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">26g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">0g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">7g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:58%;background:var(--protein)"></div></div>
+        <div class="food-kcal-text"><strong>170 kcal</strong> · Rica en hierro y creatina</div>
+      </div>
+
+      <div class="food-card show" data-macro="protein">
+        <div class="food-card-header">
+          <span class="food-name">Queso cottage</span>
+          <span class="food-macro-tag protein">Proteína</span>
+        </div>
+        <div class="food-per100">Por 100g</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">11g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">3g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">4g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:45%;background:var(--protein)"></div></div>
+        <div class="food-kcal-text"><strong>98 kcal</strong> · Ideal como snack nocturno</div>
+      </div>
+
+      <div class="food-card show" data-macro="protein">
+        <div class="food-card-header">
+          <span class="food-name">Salmón</span>
+          <span class="food-macro-tag protein">Proteína</span>
+        </div>
+        <div class="food-per100">Por 100g cocido</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">25g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">0g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">13g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:70%;background:var(--protein)"></div></div>
+        <div class="food-kcal-text"><strong>208 kcal</strong> · Omega 3 + proteína de calidad</div>
+      </div>
+
+      <!-- CARBOHIDRATOS -->
+      <div class="food-card show" data-macro="carbs">
+        <div class="food-card-header">
+          <span class="food-name">Avena</span>
+          <span class="food-macro-tag carbs">Carbohidrato</span>
+        </div>
+        <div class="food-per100">Por 100g seca</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">13g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">66g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">7g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:75%;background:var(--carbs)"></div></div>
+        <div class="food-kcal-text"><strong>389 kcal</strong> · Energía sostenida + fibra</div>
+      </div>
+
+      <div class="food-card show" data-macro="carbs">
+        <div class="food-card-header">
+          <span class="food-name">Arroz blanco</span>
+          <span class="food-macro-tag carbs">Carbohidrato</span>
+        </div>
+        <div class="food-per100">Por 100g cocido</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">2.7g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">28g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">0.3g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:55%;background:var(--carbs)"></div></div>
+        <div class="food-kcal-text"><strong>130 kcal</strong> · Clásico del fitness, fácil digestión</div>
+      </div>
+
+      <div class="food-card show" data-macro="carbs">
+        <div class="food-card-header">
+          <span class="food-name">Papa / Batata</span>
+          <span class="food-macro-tag carbs">Carbohidrato</span>
+        </div>
+        <div class="food-per100">Por 100g cocida</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">2g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">20g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">0.1g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:45%;background:var(--carbs)"></div></div>
+        <div class="food-kcal-text"><strong>86 kcal</strong> · Saciante, rico en potasio</div>
+      </div>
+
+      <div class="food-card show" data-macro="carbs">
+        <div class="food-card-header">
+          <span class="food-name">Banana</span>
+          <span class="food-macro-tag carbs">Carbohidrato</span>
+        </div>
+        <div class="food-per100">Por 100g</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">1.1g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">23g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">0.3g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:50%;background:var(--carbs)"></div></div>
+        <div class="food-kcal-text"><strong>89 kcal</strong> · Pre-entreno natural ideal</div>
+      </div>
+
+      <div class="food-card show" data-macro="carbs">
+        <div class="food-card-header">
+          <span class="food-name">Pan integral</span>
+          <span class="food-macro-tag carbs">Carbohidrato</span>
+        </div>
+        <div class="food-per100">Por 100g</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">9g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">41g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">3g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:60%;background:var(--carbs)"></div></div>
+        <div class="food-kcal-text"><strong>247 kcal</strong> · Fibra + carbos complejos</div>
+      </div>
+
+      <div class="food-card show" data-macro="carbs">
+        <div class="food-card-header">
+          <span class="food-name">Lentejas / Legumbres</span>
+          <span class="food-macro-tag carbs">Carbohidrato</span>
+        </div>
+        <div class="food-per100">Por 100g cocidas</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">9g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">20g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">0.4g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:50%;background:var(--carbs)"></div></div>
+        <div class="food-kcal-text"><strong>116 kcal</strong> · Doble función: carbs + proteína</div>
+      </div>
+
+      <!-- GRASAS -->
+      <div class="food-card show" data-macro="fat">
+        <div class="food-card-header">
+          <span class="food-name">Palta / Aguacate</span>
+          <span class="food-macro-tag fat">Grasa Saludable</span>
+        </div>
+        <div class="food-per100">Por 100g</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">2g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">9g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">15g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:72%;background:var(--fat)"></div></div>
+        <div class="food-kcal-text"><strong>160 kcal</strong> · Omega 9 + saciedad alta</div>
+      </div>
+
+      <div class="food-card show" data-macro="fat">
+        <div class="food-card-header">
+          <span class="food-name">Huevo entero</span>
+          <span class="food-macro-tag fat">Grasa Saludable</span>
+        </div>
+        <div class="food-per100">Por 100g (≈2 huevos)</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">13g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">1.1g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">11g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:68%;background:var(--fat)"></div></div>
+        <div class="food-kcal-text"><strong>155 kcal</strong> · Alimento completo, alto valor biológico</div>
+      </div>
+
+      <div class="food-card show" data-macro="fat">
+        <div class="food-card-header">
+          <span class="food-name">Aceite de oliva</span>
+          <span class="food-macro-tag fat">Grasa Saludable</span>
+        </div>
+        <div class="food-per100">Por 100ml</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">0g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">0g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">100g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:100%;background:var(--fat)"></div></div>
+        <div class="food-kcal-text"><strong>884 kcal</strong> · Grasa pura, usar en poca cantidad</div>
+      </div>
+
+      <div class="food-card show" data-macro="fat">
+        <div class="food-card-header">
+          <span class="food-name">Frutos secos (almendras)</span>
+          <span class="food-macro-tag fat">Grasa Saludable</span>
+        </div>
+        <div class="food-per100">Por 100g</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">21g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">22g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">50g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:90%;background:var(--fat)"></div></div>
+        <div class="food-kcal-text"><strong>579 kcal</strong> · Snack nutritivo, controlar porción</div>
+      </div>
+
+      <div class="food-card show" data-macro="fat">
+        <div class="food-card-header">
+          <span class="food-name">Mantequilla de maní</span>
+          <span class="food-macro-tag fat">Grasa Saludable</span>
+        </div>
+        <div class="food-per100">Por 100g</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">25g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">20g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">50g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:88%;background:var(--fat)"></div></div>
+        <div class="food-kcal-text"><strong>588 kcal</strong> · Proteína + grasa saciante</div>
+      </div>
+
+      <div class="food-card show" data-macro="fat">
+        <div class="food-card-header">
+          <span class="food-name">Semillas de chía</span>
+          <span class="food-macro-tag fat">Grasa Saludable</span>
+        </div>
+        <div class="food-per100">Por 100g</div>
+        <div class="food-macros-row">
+          <div class="food-macro-item p"><div class="food-macro-val">17g</div><div class="food-macro-lbl">Prot.</div></div>
+          <div class="food-macro-item c"><div class="food-macro-val">42g</div><div class="food-macro-lbl">Carbs</div></div>
+          <div class="food-macro-item f"><div class="food-macro-val">31g</div><div class="food-macro-lbl">Grasas</div></div>
+        </div>
+        <div class="food-kcal-bar"><div class="food-kcal-fill" style="width:80%;background:var(--fat)"></div></div>
+        <div class="food-kcal-text"><strong>486 kcal</strong> · Omega 3 vegetal + fibra</div>
+      </div>
+
+    </div><!-- /food-grid -->
+
+    <!-- CTA IN FOOD -->
+    <div class="cta-box" style="margin-top:48px;">
+      <div class="cta-eyebrow">¿Necesitás un plan completo?</div>
+      <h3>SABER QUÉ COMER ES SOLO LA MITAD</h3>
+      <p>Te ayudo a estructurar tu alimentación en un plan personalizado, con cantidades exactas según tus macros calculados.</p>
+      <button class="cta-btn" onclick="switchTab('calc')">CALCULAR MIS MACROS →</button>
+    </div>
+
+  </div>
+
+</div><!-- /main -->
+
+<script>
+  // State
+  let gender = 'm';
+  let objective = 'mantener';
+
+  function setGender(g) {
+    gender = g;
+    document.getElementById('btn-m').classList.toggle('active', g === 'm');
+    document.getElementById('btn-f').classList.toggle('active', g === 'f');
+  }
+
+  function setObj(o) {
+    objective = o;
+    ['perder','mantener','ganar'].forEach(x => {
+      document.getElementById('obj-'+x).classList.toggle('active', x === o);
+    });
+  }
+
+  function switchTab(tab) {
+    document.getElementById('tab-calc').classList.toggle('active', tab === 'calc');
+    document.getElementById('tab-food').classList.toggle('active', tab === 'food');
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', (i === 0 && tab === 'calc') || (i === 1 && tab === 'food'));
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function calcular() {
+    const edad = parseFloat(document.getElementById('edad').value);
+    const peso = parseFloat(document.getElementById('peso').value);
+    const altura = parseFloat(document.getElementById('altura').value);
+    const actividad = parseFloat(document.getElementById('actividad').value);
+
+    if (!edad || !peso || !altura || edad < 15 || peso < 30 || altura < 100) {
+      alert('Por favor completá todos los campos correctamente.');
+      return;
+    }
+
+    // Harris-Benedict (revisión Mifflin-St Jeor)
+    let tmb;
+    if (gender === 'm') {
+      tmb = 10 * peso + 6.25 * altura - 5 * edad + 5;
+    } else {
+      tmb = 10 * peso + 6.25 * altura - 5 * edad - 161;
+    }
+
+    const get = tmb * actividad;
+
+    let calorias;
+    let objText;
+    let macros;
+
+    if (objective === 'perder') {
+      calorias = get - 400;
+      objText = 'Déficit calórico para pérdida de grasa gradual (−400 kcal)';
+      macros = { prot: 0.35, carb: 0.35, fat: 0.30 };
+    } else if (objective === 'ganar') {
+      calorias = get + 300;
+      objText = 'Superávit calórico para ganancia muscular limpia (+300 kcal)';
+      macros = { prot: 0.30, carb: 0.45, fat: 0.25 };
+    } else {
+      calorias = get;
+      objText = 'Calorías de mantenimiento según tu actividad diaria';
+      macros = { prot: 0.30, carb: 0.40, fat: 0.30 };
+    }
+
+    calorias = Math.round(calorias);
+
+    const protKcal = Math.round(calorias * macros.prot);
+    const carbKcal = Math.round(calorias * macros.carb);
+    const fatKcal  = Math.round(calorias * macros.fat);
+
+    const protG = Math.round(protKcal / 4);
+    const carbG = Math.round(carbKcal / 4);
+    const fatG  = Math.round(fatKcal  / 9);
+
+    // Fill UI
+    animateNumber('res-calorias', calorias);
+    document.getElementById('res-tmb').textContent = Math.round(tmb).toLocaleString('es-AR');
+    document.getElementById('res-get').textContent = Math.round(get).toLocaleString('es-AR');
+    document.getElementById('res-obj-text').textContent = objText;
+
+    document.getElementById('res-prot-kcal').textContent = protKcal.toLocaleString('es-AR');
+    document.getElementById('res-carb-kcal').textContent = carbKcal.toLocaleString('es-AR');
+    document.getElementById('res-fat-kcal').textContent  = fatKcal.toLocaleString('es-AR');
+
+    document.getElementById('res-prot-g').textContent = protG + 'g';
+    document.getElementById('res-carb-g').textContent = carbG + 'g';
+    document.getElementById('res-fat-g').textContent  = fatG  + 'g';
+
+    // Bar
+    setTimeout(() => {
+      document.getElementById('bar-prot').style.width = (macros.prot * 100) + '%';
+      document.getElementById('bar-carb').style.width = (macros.carb * 100) + '%';
+      document.getElementById('bar-fat').style.width  = (macros.fat  * 100) + '%';
+    }, 300);
+
+    document.getElementById('leg-prot').textContent = `Proteína ${Math.round(macros.prot*100)}%`;
+    document.getElementById('leg-carb').textContent = `Carbos ${Math.round(macros.carb*100)}%`;
+    document.getElementById('leg-fat').textContent  = `Grasas ${Math.round(macros.fat*100)}%`;
+
+    // Show results
+    const results = document.getElementById('results');
+    results.style.display = 'block';
+    results.style.animation = 'none';
+    results.offsetHeight; // trigger reflow
+    results.style.animation = 'fadeUp 0.5s ease forwards';
+
+    // Trigger reveals
+    setTimeout(() => {
+      document.querySelectorAll('.reveal').forEach((el, i) => {
+        setTimeout(() => el.classList.add('visible'), i * 80);
+      });
+    }, 100);
+
+    // Scroll to results
+    setTimeout(() => {
+      results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+  }
+
+  function animateNumber(id, target) {
+    const el = document.getElementById(id);
+    const duration = 1000;
+    const start = performance.now();
+    function step(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(ease * target).toLocaleString('es-AR');
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function filterFood(macro) {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+
+    document.querySelectorAll('.food-card').forEach(card => {
+      if (macro === 'all' || card.dataset.macro === macro) {
+        card.classList.add('show');
+      } else {
+        card.classList.remove('show');
+      }
+    });
+  }
+</script>
+</body>
+</html>
