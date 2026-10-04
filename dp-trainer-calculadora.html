@@ -923,7 +923,7 @@
       <button class="obj-btn" id="obj-perder" onclick="setObj('perder')">
         <span class="obj-icon">🔥</span>
         <span class="obj-name">Perder grasa</span>
-        <span class="obj-desc">Déficit −400 kcal</span>
+        <span class="obj-desc">Déficit moderado</span>
       </button>
       <button class="obj-btn active" id="obj-mantener" onclick="setObj('mantener')">
         <span class="obj-icon">⚖️</span>
@@ -933,7 +933,7 @@
       <button class="obj-btn" id="obj-ganar" onclick="setObj('ganar')">
         <span class="obj-icon">💪</span>
         <span class="obj-name">Ganar músculo</span>
-        <span class="obj-desc">Superávit +300 kcal</span>
+        <span class="obj-desc">Superávit controlado</span>
       </button>
     </div>
 
@@ -1367,6 +1367,12 @@
     }
 
     // Mifflin-St Jeor
+    // Fuentes: Iraki J, Fitschen P, Espinar S, Helms E. Nutrition Recommendations for Bodybuilders
+    // in the Off-Season: A Narrative Review. Sports 2019;7(7):154
+    // (grasa 0,5–1,5 g/kg; proteína 1,6–2,2 g/kg; carbos ≥3–5 g/kg en superávit;
+    // superávit ~10–20%, ganancia 0,25–0,5% del peso/semana).
+    // Helms ER et al. 2014, contest prep (grasa 15–30% kcal en déficit).
+    // Piso 20% kcal en grasa por impacto hormonal.
     let tmb;
     if (gender === 'm') {
       tmb = 10 * peso + 6.25 * altura - 5 * edad + 5;
@@ -1376,21 +1382,23 @@
 
     const get = tmb * actividad;
 
+    // Déficit: −15% GET (mín 300, máx 500 kcal) | Superávit: +10% GET (mín 200, máx 350 kcal)
     let calorias;
     let objText;
+    let kcalDiff;
 
     if (objective === 'perder') {
-      calorias = get - 400;
-      objText = 'Déficit calórico para pérdida de grasa gradual (−400 kcal)';
+      kcalDiff = Math.round(Math.min(Math.max(get * 0.15, 300), 500));
+      calorias = Math.round(get - kcalDiff);
+      objText = `Déficit calórico para pérdida de grasa gradual (−${kcalDiff} kcal)`;
     } else if (objective === 'ganar') {
-      calorias = get + 300;
-      objText = 'Superávit calórico para ganancia muscular limpia (+300 kcal)';
+      kcalDiff = Math.round(Math.min(Math.max(get * 0.10, 200), 350));
+      calorias = Math.round(get + kcalDiff);
+      objText = `Superávit calórico para ganancia muscular limpia (+${kcalDiff} kcal)`;
     } else {
-      calorias = get;
+      calorias = Math.round(get);
       objText = 'Calorías de mantenimiento según tu actividad diaria';
     }
-
-    calorias = Math.round(calorias);
 
     // Peso para macros: si IMC >= 25, usar peso de referencia (IMC 25)
     const alturaM = altura / 100;
@@ -1404,11 +1412,17 @@
     const protG = Math.round(protRatio * pesoMacros);
     const protKcal = protG * 4;
 
-    // Grasa: mujer 1,0 g/kg | hombre 0,8 g/kg; piso = 20% kcal totales
-    const fatRatioKg = gender === 'f' ? 1.0 : 0.8;
-    const fatGByKg    = fatRatioKg * pesoMacros;
-    const fatGByFloor = (calorias * 0.20) / 9;
-    const fatG = Math.round(Math.max(fatGByKg, fatGByFloor));
+    // Grasa g/kg según objetivo y sexo; piso 20% y techo 35% kcal totales
+    let fatRatioKg;
+    if (objective === 'perder')        fatRatioKg = gender === 'f' ? 1.0 : 0.8;
+    else if (objective === 'mantener') fatRatioKg = gender === 'f' ? 1.1 : 1.0;
+    else                               fatRatioKg = gender === 'f' ? 1.2 : 1.1;
+
+    const fatGByKg   = fatRatioKg * pesoMacros;
+    const fatGFloor  = (calorias * 0.20) / 9;
+    const fatGCeil   = (calorias * 0.35) / 9;
+    const fatGClamped = Math.min(Math.max(fatGByKg, fatGFloor), fatGCeil);
+    const fatG = Math.round(fatGClamped);
     const fatKcal = fatG * 9;
 
     // Carbohidratos: kcal restantes
