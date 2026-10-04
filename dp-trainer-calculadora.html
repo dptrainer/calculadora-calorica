@@ -867,7 +867,7 @@
 <section class="hero">
   <p class="hero-label">Calculadora de Nutrición Personalizada</p>
   <h1>CONOCE TUS<em>CALORÍAS</em>EXACTAS</h1>
-  <p>Basado en la fórmula Harris-Benedict. Descubrí cuánto debés comer para alcanzar tu objetivo real.</p>
+  <p>Basado en la fórmula Mifflin-St Jeor. Descubrí cuánto debés comer para alcanzar tu objetivo real.</p>
 </section>
 
 <!-- TABS -->
@@ -949,6 +949,7 @@
         <div class="cal-number" id="res-calorias">0</div>
         <div class="cal-unit">KCAL / DÍA</div>
         <div class="cal-sub" id="res-obj-text"></div>
+        <div id="nota-peso-ref" style="display:none;font-size:0.78rem;color:var(--text-muted);margin-top:8px;line-height:1.4;"></div>
       </div>
 
       <!-- TMB + GET -->
@@ -1365,7 +1366,7 @@
       return;
     }
 
-    // Harris-Benedict (revisión Mifflin-St Jeor)
+    // Mifflin-St Jeor
     let tmb;
     if (gender === 'm') {
       tmb = 10 * peso + 6.25 * altura - 5 * edad + 5;
@@ -1377,31 +1378,47 @@
 
     let calorias;
     let objText;
-    let macros;
 
     if (objective === 'perder') {
       calorias = get - 400;
       objText = 'Déficit calórico para pérdida de grasa gradual (−400 kcal)';
-      macros = { prot: 0.35, carb: 0.35, fat: 0.30 };
     } else if (objective === 'ganar') {
       calorias = get + 300;
       objText = 'Superávit calórico para ganancia muscular limpia (+300 kcal)';
-      macros = { prot: 0.30, carb: 0.45, fat: 0.25 };
     } else {
       calorias = get;
       objText = 'Calorías de mantenimiento según tu actividad diaria';
-      macros = { prot: 0.30, carb: 0.40, fat: 0.30 };
     }
 
     calorias = Math.round(calorias);
 
-    const protKcal = Math.round(calorias * macros.prot);
-    const carbKcal = Math.round(calorias * macros.carb);
-    const fatKcal  = Math.round(calorias * macros.fat);
+    // Peso para macros: si IMC >= 25, usar peso de referencia (IMC 25)
+    const alturaM = altura / 100;
+    const imc = peso / (alturaM * alturaM);
+    const pesoRef = 25 * alturaM * alturaM;
+    const usarPesoRef = imc >= 25;
+    const pesoMacros = usarPesoRef ? pesoRef : peso;
 
-    const protG = Math.round(protKcal / 4);
+    // Proteína: déficit 2,0 g/kg | mantenimiento y superávit 1,8 g/kg
+    const protRatio = objective === 'perder' ? 2.0 : 1.8;
+    const protG = Math.round(protRatio * pesoMacros);
+    const protKcal = protG * 4;
+
+    // Grasa: mujer 1,0 g/kg | hombre 0,8 g/kg; piso = 20% kcal totales
+    const fatRatioKg = gender === 'f' ? 1.0 : 0.8;
+    const fatGByKg    = fatRatioKg * pesoMacros;
+    const fatGByFloor = (calorias * 0.20) / 9;
+    const fatG = Math.round(Math.max(fatGByKg, fatGByFloor));
+    const fatKcal = fatG * 9;
+
+    // Carbohidratos: kcal restantes
+    const carbKcal = calorias - protKcal - fatKcal;
     const carbG = Math.round(carbKcal / 4);
-    const fatG  = Math.round(fatKcal  / 9);
+
+    // Porcentajes reales para el gráfico
+    const pctProt = protKcal / calorias;
+    const pctFat  = fatKcal  / calorias;
+    const pctCarb = carbKcal / calorias;
 
     // Fill UI
     animateNumber('res-calorias', calorias);
@@ -1417,16 +1434,27 @@
     document.getElementById('res-carb-g').textContent = carbG + 'g';
     document.getElementById('res-fat-g').textContent  = fatG  + 'g';
 
+    // Nota peso de referencia (solo cuando IMC >= 25)
+    const notaEl = document.getElementById('nota-peso-ref');
+    if (notaEl) {
+      if (usarPesoRef) {
+        notaEl.textContent = `Proteína y grasas calculadas sobre tu peso de referencia (${pesoRef.toFixed(1)} kg, IMC 25) porque tu IMC actual es ${imc.toFixed(1)}.`;
+        notaEl.style.display = 'block';
+      } else {
+        notaEl.style.display = 'none';
+      }
+    }
+
     // Bar
     setTimeout(() => {
-      document.getElementById('bar-prot').style.width = (macros.prot * 100) + '%';
-      document.getElementById('bar-carb').style.width = (macros.carb * 100) + '%';
-      document.getElementById('bar-fat').style.width  = (macros.fat  * 100) + '%';
+      document.getElementById('bar-prot').style.width = (pctProt * 100).toFixed(1) + '%';
+      document.getElementById('bar-carb').style.width = (pctCarb * 100).toFixed(1) + '%';
+      document.getElementById('bar-fat').style.width  = (pctFat  * 100).toFixed(1) + '%';
     }, 300);
 
-    document.getElementById('leg-prot').textContent = `Proteína ${Math.round(macros.prot*100)}%`;
-    document.getElementById('leg-carb').textContent = `Carbos ${Math.round(macros.carb*100)}%`;
-    document.getElementById('leg-fat').textContent  = `Grasas ${Math.round(macros.fat*100)}%`;
+    document.getElementById('leg-prot').textContent = `Proteína ${Math.round(pctProt*100)}%`;
+    document.getElementById('leg-carb').textContent = `Carbos ${Math.round(pctCarb*100)}%`;
+    document.getElementById('leg-fat').textContent  = `Grasas ${Math.round(pctFat*100)}%`;
 
     // Show results
     const results = document.getElementById('results');
